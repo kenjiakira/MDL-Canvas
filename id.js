@@ -32,7 +32,7 @@ async function circleImage(imageBuffer) {
 
 module.exports.config = {
     name: "id",
-    version: "1.2.1",
+    version: "1.2.2",
     hasPermission: 0,
     credits: "Hoàng Ngọc Từ",
     description: "Tạo căn cước",
@@ -52,13 +52,18 @@ module.exports.run = async ({ event, api }) => {
 
     const data = readOrCreateData();
 
+    if (args[0] === 'remove') {
+        if (data[senderID]) {
+            delete data[senderID];
+            fs.writeFileSync(apiPath, JSON.stringify(data, null, 2), 'utf8');
+            return api.sendMessage("Thông tin căn cước của bạn đã được xoá.", threadID, event.messageID);
+        } else {
+            return api.sendMessage("Bạn chưa có căn cước công dân để xoá.", threadID, event.messageID);
+        }
+    }
+
     if (data[senderID]) {
         const idCard = data[senderID];
-
-        if (idCard.status === 'Bị BAN') {
-            return api.sendMessage("🔒 Bạn đã bị BAN và không thể thực hiện các lệnh liên quan đến tài chính.", threadID);
-        }
-
 
         const imagePath = await createIDCardImage(idCard, senderID);
         return api.sendMessage({
@@ -101,7 +106,6 @@ module.exports.run = async ({ event, api }) => {
         console.error('Lỗi khi lưu tệp JSON:', error);
     }
 
-
     const imagePath = await createIDCardImage(idCard, senderID);
     return api.sendMessage({
         attachment: fs.createReadStream(imagePath)
@@ -114,14 +118,13 @@ async function createIDCardImage(idCard, userID) {
     const canvas = createCanvas(width, height);
     const ctx = canvas.getContext('2d');
 
-  
-    const backgroundImagePath = 'https://i.imgur.com/GdClFPr.jpeg'; 
+    const backgroundImagePath = 'https://i.imgur.com/KkkxVrf.jpeg'; 
     const background = await loadImage(backgroundImagePath);
     ctx.drawImage(background, 0, 0, width, height);
 
     ctx.fillStyle = '#000000';
-    ctx.font = ' 20px Open Sans';
-      ctx.font = 'bold 23px Arial';
+    ctx.font = '20px Open Sans';
+    ctx.font = 'bold 23px Arial';
     ctx.fillText(`${idCard.uid}`, 320, 210);
     ctx.font = '20px Open Sans'; 
     ctx.fillText(`${idCard.name}`, 380, 244);
@@ -130,13 +133,11 @@ async function createIDCardImage(idCard, userID) {
     ctx.fillText(`${idCard.address}`, 360, 335);
     ctx.fillText(`${idCard.issuedDate}`, 380, 367);
 
-
     const avatarUrl = `https://graph.facebook.com/${userID}/picture?width=512&height=512&access_token=6628568379%7Cc1e620fa708a1d5696fb991c1bde5662`;
     const avatarResponse = await axios.get(avatarUrl, { responseType: 'arraybuffer' });
     const avatarBuffer = Buffer.from(avatarResponse.data);
     const avatar = await circleImage(avatarBuffer);
 
-   
     const avatarImage = await loadImage(avatar);
     ctx.drawImage(avatarImage, 50, 170, 200, 200);
 
